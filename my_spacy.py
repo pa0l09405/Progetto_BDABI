@@ -10,10 +10,10 @@ import en_core_web_sm
 from collections import Counter
 
 # Load English tokenizer, tagger, parser, NER and word vectors
-#nlp = English()
+nlp = English()
 
 #for multilanguage
-nlp=spacy.load("xx_ent_wiki_sm")
+#nlp=spacy.load("xx_ent_wiki_sm")
 
 df=pd.read_csv("./csv_cleaned_Alfredo 2.csv")
 df=df.drop_duplicates()
@@ -102,19 +102,19 @@ with open('./num_capital_words.csv', 'w', encoding="ISO-8859-1", newline='') as 
 		writer.writerows(rows)
 csv_num_capital_words.close()
 '''
-
+'''
 nlp = en_core_web_sm.load()
 list_word_pos = []
 
 list_adv = []
 list_noun = []
 list_propn = []
-list_I_we_me_us = []
+#list_I_we_me_us = []
 list_adj = []
-list_no_not = []
+#list_no_not = []
 list_punct = []
 
-for i in range(0,2):
+for i in range(0,size):
 	list_word_pos = []
 	docs=nlp(text[i])
 	for word in docs:
@@ -125,19 +125,65 @@ for i in range(0,2):
 	list_punct.append(list_word_pos.count("PUNCT"))
 	list_adj.append(list_word_pos.count("ADJ"))
 	
-	count_I_we_us=text[i].count(" I ")+text[i].count(" we ")+text[i].count(" WE ")+text[i].count(" We ")+text[i].count(" us ")+text[i].count(" US ")+text[i].count(" Us ")+text[i].count(" me ")+text[i].count(" ME ")+text[i].count(" Me ")
-	list_I_we_me_us.append(count_I_we_us)
+	#count_I_we_us=text[i].count(" I ")+text[i].count(" we ")+text[i].count(" WE ")+text[i].count(" We ")+text[i].count(" us ")+text[i].count(" US ")+text[i].count(" Us ")+text[i].count(" me ")+text[i].count(" ME ")+text[i].count(" Me ")
+	#list_I_we_me_us.append(count_I_we_us)
 	
-	count_no_not=text[i].count(" no ")+text[i].count(" NO ")+text[i].count(" No ")+text[i].count(" not ")+text[i].count(" NOT ")+text[i].count(" Not ")
-	list_no_not.append(count_no_not)
+	#count_no_not=text[i].count(" no ")+text[i].count(" NO ")+text[i].count(" No ")+text[i].count(" not ")+text[i].count(" NOT ")+text[i].count(" Not ")
+	#list_no_not.append(count_no_not)
 	
 print("List adv = ",list_adv)
 print("List adj = ",list_adj)
 print("List noun = ",list_noun)
-print("List I_we_me_us = ",list_I_we_me_us)
-print("List no_not = ",list_no_not)
+#print("List I_we_me_us = ",list_I_we_me_us)
+#print("List no_not = ",list_no_not)
 print("List propn = ",list_propn)
 print("List punct = ",list_punct)
+
+
+with open('./pos_tagging.csv', 'w', encoding="ISO-8859-1", newline='') as csv_pos_tagging:
+		writer = csv.writer(csv_pos_tagging)
+		rows = zip_longest(*[list_adj,list_adv,list_noun,list_propn,list_punct], fillvalue = '')
+		writer.writerows(rows)
+csv_pos_tagging.close()
+'''
+
+
+'''
+total = 0
+for i in list1:
+    total += len(i)
+ave_size = float(total) / float(len(list1))
+print(ave_size)
+'''
+
+list_lunghezze=[]
+list_avg_lunghezze=[]
+for i in range(0,len(text)):
+	token_list = []
+
+	my_doc = nlp(text[i])
+	
+	total=0
+	for token in my_doc: 
+		if not token.is_punct | token.is_space:
+			total += len(token.text)
+			token_list.append(token.text)
+	list_lunghezze.append(len(token_list))
+	list_avg_lunghezze.append(float(total) / float(len(token_list)))
+	print(token_list)
+print(list_lunghezze)
+print(list_avg_lunghezze)
+
+
+with open('./word.csv', 'w', encoding="ISO-8859-1", newline='') as csv_word:
+		writer = csv.writer(csv_word)
+		rows = zip_longest(*[list_lunghezze,list_avg_lunghezze], fillvalue = '')
+		writer.writerows(rows)
+csv_word.close()
+
+
+
+
 
 
 		
