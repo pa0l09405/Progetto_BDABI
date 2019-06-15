@@ -170,9 +170,9 @@ for i in range(0,len(text)):
 			token_list.append(token.text)
 	list_lunghezze.append(len(token_list))
 	list_avg_lunghezze.append(float(total) / float(len(token_list)))
-	print(token_list)
-print(list_lunghezze)
-print(list_avg_lunghezze)
+	#print(token_list)
+#print(list_lunghezze)
+#print(list_avg_lunghezze)
 
 
 with open('./word.csv', 'w', encoding="ISO-8859-1", newline='') as csv_word:
