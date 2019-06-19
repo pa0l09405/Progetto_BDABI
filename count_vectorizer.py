@@ -34,15 +34,26 @@ import re
 import seaborn as sns
 import spacy 
 import xlrd
+import pandas
+import pymongo
+
+from pymongo import MongoClient
+from pandas import DataFrame
+from pyspark.sql import SparkSession
+from pyspark import SparkConf, SparkContext
+from pyspark.sql import SQLContext
 
 if __name__=='__main__':
     spark = SparkSession.builder.appName("CountVectorizer").getOrCreate()
     spark.sparkContext.setLogLevel('WARN')
-    #df=pd.read_csv("/home/vmadmin/bigdata/csv_cleaned_Alfredo 2.csv",nrows=10)
-    #sqlContext = SQLContext(sc)
-    #df = spark.read.format('com.databricks.spark.csv').options(header='true').load('/home/vmadmin/bigdata/csv_cleaned_Alfredo 2.csv')
-    df = spark.read.format('com.databricks.spark.csv').options(header='true').load('/home/vmadmin/bigdata/text_and_title_cleaned.csv')
+    
+    client = MongoClient('mongodb://localhost:27017/')
+    db = client.prova
+    collection = db.coll
+    print(collection)
+    df = DataFrame(collection.find())
     df = df.drop_duplicates()
+    print(df)
     
     print(df.show(4))
     nlp = English()
