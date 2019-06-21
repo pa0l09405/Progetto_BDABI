@@ -1,56 +1,52 @@
-#from itertools import zip_longest
-#from sklearn.ensemble import RandomForestClassifier
-#from sklearn.model_selection import train_test_split
 from collections import Counter
+from pandas import DataFrame
+from pymongo import MongoClient
+from pyspark import SparkConf, SparkContext
 from pyspark.ml import Pipeline
+from pyspark.ml.classification import LinearSVC
 from pyspark.ml.classification import LogisticRegression
 from pyspark.ml.classification import NaiveBayes, NaiveBayesModel
 from pyspark.ml.classification import RandomForestClassifier
-from pyspark.ml.classification import LinearSVC
+from pyspark.ml.classification import DecisionTreeClassifier
 from pyspark.ml.evaluation import BinaryClassificationEvaluator
+from pyspark.mllib.evaluation import BinaryClassificationMetrics
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.feature import CountVectorizer
 from pyspark.ml.feature import IDF
-from pyspark.ml.feature import StringIndexer
+from pyspark.ml.feature import IndexToString, StringIndexer, VectorIndexer, VectorSlicer
+from pyspark.ml.feature import MinMaxScaler
 from pyspark.ml.feature import OneHotEncoderEstimator
-#from pyspark.mllib.tree import RandomForest, RandomForestModel
+from pyspark.ml.feature import StringIndexer
+from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.linalg import Vectors
+from pyspark.ml.feature import ChiSqSelector
+from pyspark.ml.stat import Correlation
 from pyspark.mllib.util import MLUtils
 from pyspark.sql import SparkSession
 from pyspark.sql import SQLContext
-from pyspark.ml.linalg import Vectors
 from sklearn import metrics
-#from sklearn.feature_extraction.text import CountVectorizer
-#from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.utils.multiclass import unique_labels
-from spacy.lang.en import English
-from spacy.lang.en.stop_words import STOP_WORDS
-from pyspark.ml.stat import Correlation
-from pyspark.ml import Pipeline
-from pyspark.ml.classification import RandomForestClassifier
-from pyspark.ml.feature import IndexToString, StringIndexer, VectorIndexer
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
+#from sklearn.naive_bayes import MultinomialNB
+#from sklearn.utils.multiclass import unique_labels
 import csv
-import en_core_web_sm
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import pymongo
 import random
 import re
 import seaborn as sns
 import spacy 
-import xlrd
-import pandas
-import pymongo
 
-from pymongo import MongoClient
-from pandas import DataFrame
-from pyspark.sql import SparkSession
-from pyspark import SparkConf, SparkContext
-from pyspark.sql import SQLContext
-from pyspark.ml.feature import MinMaxScaler
-from pyspark.ml.feature import VectorAssembler
+def ExtractFeatureImp(featureImp, dataset, featuresCol):
+    list_extract = []
+    for i in dataset.schema[featuresCol].metadata["ml_attr"]["attrs"]:
+        list_extract = list_extract + dataset.schema[featuresCol].metadata["ml_attr"]["attrs"][i]
+    varlist = pd.DataFrame(list_extract)
+    varlist['score'] = varlist['idx'].apply(lambda x: featureImp[x])
+    return(varlist.sort_values('score', ascending = False))
 
 '''
 def extract(row):
@@ -82,14 +78,10 @@ def normalize(df_calc, df_apply):
     return final_data
 '''
 	
-	
-	
-
-
-
+'''
 def spark_remove_low_var_features(spark_df, features, threshold, remove):
     
-    '''	
+    	
     This function removes low-variance features from features columns in Spark DF
     
     INPUTS:
@@ -102,9 +94,8 @@ def spark_remove_low_var_features(spark_df, features, threshold, remove):
     @spark_df: updated Spark Dataframe 
     @low_var_features: list of low variance features 
     @low_var_values: list of low variance values
-    '''
- 
     
+ 
     # set list of low variance features
     low_var_features = []
     
@@ -135,30 +126,11 @@ def spark_remove_low_var_features(spark_df, features, threshold, remove):
     
     # return Spark Dataframe, low variance features, and low variance values
     return spark_df, low_var_features, low_var_values
-
-
-
-
-
-
-
-
-
-
+'''
 
 if __name__=='__main__':
-    spark = SparkSession.builder.appName("FeatureStyle").getOrCreate()
+    spark = SparkSession.builder.appName("Features_Style").getOrCreate()
     spark.sparkContext.setLogLevel('ERROR')
-    #sqlContext = SQLContext(spark)
-    #spark.conf.set("spark.sql.execution.arrow.enabled", "true")
-    
-    '''
-    # Generate a Pandas DataFrame
-    pdf = pd.DataFrame(np.random.rand(100, 3))
-    # Create a Spark DataFrame from a Pandas DataFrame using Arrow
-    df = spark.createDataFrame(pdf)
-    df.show()
-    '''
     
     client = MongoClient('mongodb://localhost:27017/')
     db = client.prova
@@ -174,7 +146,6 @@ if __name__=='__main__':
     avg_word_length_text=df.avg_word_length_text.tolist()
     comments=df.comments.tolist()
     country=df.country.tolist()
-    #crawled=df.crawled.tolist()
     domain_rank=df.domain_rank.tolist()
     key=df.key.tolist()
     language=df.language.tolist()
@@ -200,143 +171,353 @@ if __name__=='__main__':
     num_word_text=df.num_word_text.tolist()
     ord_in_thread=df.ord_in_thread.tolist()
     participants_count=df.participants_count.tolist()
-    #published=df.published.tolist()
     replies_count=df.replies_count.tolist()
     shares=df.shares.tolist()
-    #site_url=df.site_url.tolist()
     spam_score=df.spam_score.tolist()
     thread_title=df.thread_title.tolist()
     type=df.type.tolist()
     
-    df_spark = spark.createDataFrame(zip(author,avg_word_length_text,comments,country,domain_rank,key,language,likes,main_img_url,num_adj_in_text,num_adj_in_title,num_adv_in_text,num_adv_in_title,num_capital_words_in_text,num_capital_words_in_title,num_exclamation_mark_in_text,num_exclamation_mark_in_title,num_noun_in_text,num_noun_in_title,num_propn_in_text,num_propn_in_title,num_punct_in_text,num_punct_in_title,num_question_mark_in_text,num_question_mark_in_title,num_sentences_in_text,num_word_text,ord_in_thread,participants_count,replies_count,shares,spam_score,thread_title,type), schema=['author','avg_word_length_text','comments','country','domain_rank','key','language','likes','main_img_url','num_adj_in_text','num_adj_in_title','num_adv_in_text','num_adv_in_title','num_capital_words_in_text','num_capital_words_in_title','num_exclamation_mark_in_text','num_exclamation_mark_in_title','num_noun_in_text','num_noun_in_title','num_propn_in_text','num_propn_in_title','num_punct_in_text','num_punct_in_title','num_question_mark_in_text','num_question_mark_in_title','num_sentences_in_text','num_word_text','ord_in_thread','participants_count','replies_count','shares','spam_score','thread_title','type'])
-    #df_spark = spark.createDataFrame(zip(avg_word_length_text,comments,domain_rank,key,likes,num_adj_in_text,num_adj_in_title,num_adv_in_text,num_adv_in_title,num_capital_words_in_text,num_capital_words_in_title,num_exclamation_mark_in_text,num_exclamation_mark_in_title,num_noun_in_text,num_noun_in_title,num_propn_in_text,num_propn_in_title,num_punct_in_text,num_punct_in_title,num_question_mark_in_text,num_question_mark_in_title,num_sentences_in_text,num_word_text,ord_in_thread,participants_count,replies_count,shares,spam_score,type), schema=['avg_word_length_text','comments','domain_rank','key','likes','num_adj_in_text','num_adj_in_title','num_adv_in_text','num_adv_in_title','num_capital_words_in_text','num_capital_words_in_title','num_exclamation_mark_in_text','num_exclamation_mark_in_title','num_noun_in_text','num_noun_in_title','num_propn_in_text','num_propn_in_title','num_punct_in_text','num_punct_in_title','num_question_mark_in_text','num_question_mark_in_title','num_sentences_in_text','num_word_text','ord_in_thread','participants_count','replies_count','shares','spam_score','type'])
-    
-	
-    list_accuracy = []
-	
-	
-    for i in range(0,10):
-   
-       
-	
-        print("data set1")
-        df_spark.groupBy("type").count().show()
-        # Taking 70% of both 0's and 1's into training set
-        train = df_spark.sampleBy("type", fractions={'fake': 0.8, 'real': 0.8}, seed=random.randint(0,100))
-        train.show()
-        print(train.describe())
-        # Subtracting 'train' from original 'data' to get test set 
-        test = df_spark.exceptAll(train)
-        
-        print("training set1")
-        train.groupBy("type").count().show()
-        print("test set1")
-        test.groupBy("type").count().show()
-
-        '''        
-        for i in train.dtypes:
-            #if i[1]=='string':
-            print(i[0])
-            print(train.groupBy(i[0]).count().orderBy('count', ascending=False).toPandas())
-            print(pd.Series(train.select(i[0]).collect()).describe())
-            print(train.select(i[0]).describe().show())
+    df_spark = spark.createDataFrame(zip(avg_word_length_text,num_adj_in_text,num_adj_in_title,num_adv_in_text,num_adv_in_title,num_capital_words_in_text,num_capital_words_in_title,num_exclamation_mark_in_text,num_exclamation_mark_in_title,num_noun_in_text,num_noun_in_title,num_propn_in_text,num_propn_in_title,num_punct_in_text,num_punct_in_title,num_question_mark_in_text,num_question_mark_in_title,num_sentences_in_text,num_word_text,type), schema=['avg_word_length_text','num_adj_in_text','num_adj_in_title','num_adv_in_text','num_adv_in_title','num_capital_words_in_text','num_capital_words_in_title','num_exclamation_mark_in_text','num_exclamation_mark_in_title','num_noun_in_text','num_noun_in_title','num_propn_in_text','num_propn_in_title','num_punct_in_text','num_punct_in_title','num_question_mark_in_text','num_question_mark_in_title','num_sentences_in_text','num_word_text','type'])
 			
-        '''	
-			
-        #data_features= set(train.columns) - set(['key','type','language','main_img_url','country'])	
+    '''
+    #y=train.select('type')
+    #train=train.drop("type")
+    #print("FEATURE : ",train.columns)
+    #train_normalized = normalize(train,train)
 		
-        #y=train.select('type')
-        #train=train.drop("type")
-        #print("FEATURE : ",train.columns)
-        #train_normalized = normalize(train,train)
+    #print("Train normalized : ")
+    #print(train_normalized.show())
 		
-        
-		
-		
-        #print("Train normalized : ")
-        #print(train_normalized.show())
-		
-        #train_df, train_low_var_features, train_low_var_values = spark_remove_low_var_features(train_normalized, data_features, 2, True)
-        #train_df.drop(train_low_var_features)
-        #print(train_df.columns)
-
-        #pipeline stages
-        stages = []
-	
-        
-        #PROVA 1	
-        #categoricalColumns = ['language','country','author','type']
-        #numericCols = ['avg_word_length_text','comments','domain_rank','key','likes','num_adj_in_text','num_adj_in_title','num_adv_in_text','num_adv_in_title','num_capital_words_in_text','num_capital_words_in_title','num_exclamation_mark_in_text','num_exclamation_mark_in_title','num_noun_in_text','num_noun_in_title','num_propn_in_text','num_propn_in_title','num_punct_in_text','num_punct_in_title','num_question_mark_in_text','num_question_mark_in_title','num_sentences_in_text','num_word_text','ord_in_thread','participants_count','replies_count','shares','spam_score']
-
-        #PROVA 2    
-        categoricalColumns = ['language','country','author','type']
-        numericCols = ['avg_word_length_text','num_adj_in_text','num_adj_in_title','num_adv_in_text','num_adv_in_title','num_capital_words_in_text','num_capital_words_in_title','num_exclamation_mark_in_text','num_exclamation_mark_in_title','num_noun_in_text','num_noun_in_title','num_propn_in_text','num_propn_in_title','num_punct_in_text','num_punct_in_title','num_question_mark_in_text','num_question_mark_in_title','num_sentences_in_text','num_word_text']
-
-
+    #train_df, train_low_var_features, train_low_var_values = spark_remove_low_var_features(train_normalized, data_features, 2, True)
+    #train_df.drop(train_low_var_features)
+    #print(train_df.columns)
+    '''
     
-        
-        for categoricalCol in categoricalColumns:
-            stringIndexer = StringIndexer(inputCol = categoricalCol, outputCol = categoricalCol + 'Index')
-            encoder = OneHotEncoderEstimator(inputCols=[stringIndexer.getOutputCol()], outputCols=[categoricalCol + "classVec"])
-            stages += [stringIndexer, encoder]		
+    #pipeline stages
+    stages = []
+	    
+    #...	
+    numericCols = ['avg_word_length_text','num_adj_in_text','num_adj_in_title','num_adv_in_text','num_adv_in_title','num_capital_words_in_text','num_capital_words_in_title','num_exclamation_mark_in_text','num_exclamation_mark_in_title','num_noun_in_text','num_noun_in_title','num_propn_in_text','num_propn_in_title','num_punct_in_text','num_punct_in_title','num_question_mark_in_text','num_question_mark_in_title','num_sentences_in_text','num_word_text']
+    label_stringIdx = StringIndexer(inputCol = 'type', outputCol = 'label')
+    stages += [label_stringIdx]	
+    assemblerInputs=numericCols 
+    #print("AssemblerInputs ", assemblerInputs)
+    assembler = VectorAssembler(inputCols=assemblerInputs, outputCol="features")
+    stages += [assembler]
+    pipeline = Pipeline(stages = stages)
+    pipelineModel = pipeline.fit(df_spark)
+    df_new = pipelineModel.transform(df_spark)
+    selectedCols = ['label', 'features']
+    df_new = df_new.select(selectedCols)
+    df_new.printSchema()
 		
-		
-		
-        label_stringIdx = StringIndexer(inputCol = 'type', outputCol = 'label')
-        stages += [label_stringIdx]	
-	
-	
-        assemblerInputs = [c + "classVec" for c in categoricalColumns] + numericCols
-        assembler = VectorAssembler(inputCols=assemblerInputs, outputCol="features")
-        assembler.setHandleInvalid("keep")
-        stages += [assembler]
+    print("Data set")
+    print(df_new.show(truncate=False))
+			
+    #Split train e test
+    train = df_new.sampleBy("label", fractions={1.0: 0.8, 0.0: 0.8}, seed=2)
+    test = df_new.exceptAll(train)
+    
+    #... 
+    evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
+    paramGrid = ParamGridBuilder().build()
+    
+    #Random Forest
+    classifier = RandomForestClassifier(featuresCol = 'features', labelCol = 'label')
+    cv = CrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cvModel = cv.fit(train) 
+    print("[Random Forest] Default accuracy: ",cvModel.avgMetrics)
+    
+    #Decision Tree
+    classifier = DecisionTreeClassifier(featuresCol = 'features', labelCol = 'label')
+    cv = CrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cvModel = cv.fit(train) 
+    print("[Decision Tree] Default accuracy: ",cvModel.avgMetrics)
+    '''
+    #Linear SVC
+    classifier = LinearSVC(featuresCol = 'features', labelCol = 'label')
+    cv = CrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cvModel = cv.fit(train) 
+    print("Linear SVC (default accuracy) ",cvModel.avgMetrics)
+    
+    #Logistic Regression
+    classifier = LogisticRegression(featuresCol = 'features', labelCol = 'label')
+    cv = CrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cvModel = cv.fit(train) 
+    print("Logistic Regression (default accuracy) ",cvModel.avgMetrics)
+    
+    #Naive Bayes
+    classifier = NaiveBayes(featuresCol = 'features', labelCol = 'label')
+    cv = CrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cvModel = cv.fit(train) 
+    print("Naive Bayes (default accuracy) ",cvModel.avgMetrics)
+    '''
+    '''
+    print("Metodo 1")
+    selector = ChiSqSelector(numTopFeatures=1, featuresCol="features", outputCol="selectedFeatures", labelCol="clicked")
+    result = selector.fit(train).transform(train)
+    print("ChiSqSelector output with top %d features selected" % selector.getNumTopFeatures())
+    result.show()
+    '''
+    
+    print("[Decision Tree] Feature Selection")
+    random_fs = RandomForestClassifier(numTrees=100, maxDepth=5, featuresCol = 'features', labelCol = 'label')
+    model = random_fs.fit(train)
+    print(model.featureImportances)
+    varlist = ExtractFeatureImp(model.featureImportances, train, "features")
 
-        pipeline = Pipeline(stages = stages)
-        pipelineModel = pipeline.fit(df_spark)
-        df_new = pipelineModel.transform(df_spark)
-        selectedCols = ['label', 'features']
-        df_new = df_new.select(selectedCols)
-        df_new.printSchema()
-		
-        print("data set2")
-        print(df_new.show())
-		
-        print("data set2 counts")
-        df_new.groupBy("label").count().show()
-        #split di df_new
-        train = df_new.sampleBy("label", fractions={1.0: 0.8, 0.0: 0.8}, seed=random.randint(0,100))		
-        print("training set 2")
-        print(train.show())
-        print(train.describe())
-        # Subtracting 'train' from original 'data' to get test set 
-        test = df_new.exceptAll(train)
+    list_acc = []
+    for i in range (1,20):
+        varidx = [x for x in varlist['idx'][0:i]]
+        slicer = VectorSlicer(inputCol="features", outputCol="features2", indices=varidx)
+        new_train = slicer.transform(train)
+        new_train = new_train.drop('rawPrediction', 'probability', 'prediction')
+        dt2 = DecisionTreeClassifier(featuresCol = 'features2', labelCol = 'label')
+        #print(dt2.explainParams())
+        paramGrid = ParamGridBuilder().build()
+        cv = CrossValidator(estimator=dt2, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+        cvModel = cv.fit(new_train) 
+        print("    [Decision Tree] Accuracy con num_features = ",i, cvModel.avgMetrics)
+        list_acc.append(cvModel.avgMetrics)
+            
+    best_idx = list_acc.index(max(list_acc))+1
+    print("[Decision Tree] Il numero di features ottimo è ", best_idx)
+
+    varidx = [x for x in varlist['idx'][0:best_idx]]
+    slicer = VectorSlicer(inputCol="features", outputCol="features2", indices=varidx)
+    new_train = slicer.transform(train)
+    new_train = new_train.drop('rawPrediction', 'probability', 'prediction')
+    dt2 = DecisionTreeClassifier(featuresCol = 'features2', labelCol = 'label')
+    #print(dt2.explainParams())
+    paramGrid = (ParamGridBuilder()
+             .addGrid(dt2.maxDepth, [2, 5, 10, 15])
+             .addGrid(dt2.impurity, ['gini', 'entropy'])
+             .addGrid(dt2.minInstancesPerNode, [1, 2, 3])
+             .build())
+    cv = CrossValidator(estimator=dt2, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cvModel = cv.fit(new_train) 
+    print("[Decision Tree] Selezione degli iperparametri ",cvModel.avgMetrics)
+    print("[Decision Tree] Modello migliore ", cvModel.bestModel)
+    print("[Decision Tree] Parametri migliori ", cvModel.bestModel.extractParamMap())
+    
+    varidx = [x for x in varlist['idx'][0:best_idx]]
+    slicer = VectorSlicer(inputCol="features", outputCol="features2", indices=varidx)
+    new_test = slicer.transform(test)
+    predictions = cvModel.bestModel.transform(new_test)
         
-        print("training set2")
-        train.groupBy("label").count().show()
-        print("test set2")
-        test.groupBy("label").count().show()
+    evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
+    accuracy = evaluator.evaluate(predictions)
+    evaluator = BinaryClassificationEvaluator()
+    roc_auc = evaluator.evaluate(predictions)        
+        
+    print ("[Decision Tree] Accuracy Score: {0:.4f}".format(accuracy))
+    print ("[Decision Tree] ROC-AUC: {0:.4f}".format(roc_auc))
+        
+    label=[1.0,0.0]
+    predictions_pandas = predictions.toPandas()
+    lbl = predictions_pandas['label'].tolist()
+    prd = predictions_pandas['prediction'].tolist()
+    cm = confusion_matrix(lbl, prd, labels=label)
+    #print("Confusion matrix ",cm)
+    tp = cm[0][0]
+    #print("TP ", tp)
+    fp = cm[1][0]
+    #print("FP ", fp)        
+    precision = tp /(tp + fp)
+    print("[Decision Tree] Precision: {0:.4f}".format(precision))
+    
+    ax= plt.subplot()
+    sns.heatmap(cm, annot=True, ax = ax, cmap='Blues', fmt="d"); #annot=True to annotate cells
+
+    # labels, title and ticks
+    ax.set_xlabel('Predicted labels');ax.set_ylabel('True labels'); 
+    ax.set_title('Confusion Matrix'); 
+    ax.xaxis.set_ticklabels(['real','fake']); ax.yaxis.set_ticklabels(['real','fake'])
+        
+    plt.savefig('/home/vmadmin/fake_and_real_news_project/confusione_decision_tree.pdf', dpi=300, bbox_inches="tight")
+    
+    
+    print("\n\n\n\n")
+    print("[Random Forest] Selezione degli iperparametri ")
+    random_forest = RandomForestClassifier(featuresCol = 'features', labelCol = 'label', featureSubsetStrategy='auto', minInstancesPerNode=2)
 		
+    evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
+    paramGrid = (ParamGridBuilder()
+        .addGrid(random_forest.maxDepth, [5, 10])
+        .addGrid(random_forest.numTrees, [20, 50, 100])
+        .addGrid(random_forest.subsamplingRate, [0.7, 1.0])
+        .build())
+    cv = CrossValidator(estimator=random_forest, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+        
+    # Run cross validations.  This can take about 6 minutes since it is training over 20 trees!
+    cvModel = cv.fit(train)
+    print("[Random Forest] Modello migliore ", cvModel.bestModel)
+    print("[Random Forest] Parametri migliori ", cvModel.bestModel.extractParamMap())
+
+    predictions = cvModel.transform(test)
+        
+    evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
+    accuracy = evaluator.evaluate(predictions)
+    evaluator = BinaryClassificationEvaluator()
+    roc_auc = evaluator.evaluate(predictions)        
+        
+    print ("[Random Forest] Accuracy Score: {0:.4f}".format(accuracy))
+    print ("[Random Forest] ROC-AUC: {0:.4f}".format(roc_auc))
+        
+    label=[1.0,0.0]
+    predictions_pandas = predictions.toPandas()
+    lbl = predictions_pandas['label'].tolist()
+    prd = predictions_pandas['prediction'].tolist()
+    cm = confusion_matrix(lbl, prd, labels=label)
+    #print("Confusion matrix ",cm)
+    tp = cm[0][0]
+    #print("TP ", tp)
+    fp = cm[1][0]
+    #print("FP ", fp)        
+    precision = tp /(tp + fp)
+    print ("[Random Forest] Precision: {0:.4f}".format(precision))
+    
+    ax= plt.subplot()
+    sns.heatmap(cm, annot=True, ax = ax, cmap='Blues', fmt="d"); #annot=True to annotate cells
+
+    # labels, title and ticks
+    ax.set_xlabel('Predicted labels');ax.set_ylabel('True labels'); 
+    ax.set_title('Confusion Matrix'); 
+    ax.xaxis.set_ticklabels(['real','fake']); ax.yaxis.set_ticklabels(['real','fake'])
+        
+    plt.savefig('/home/vmadmin/fake_and_real_news_project/confusion_random_forest.pdf', dpi=300, bbox_inches="tight")
+    
+    for i in range(0,1):
+        print("Arrivederci")
+        '''
+    	random_forest = RandomForestClassifier(featuresCol = 'features', labelCol = 'label', featureSubsetStrategy='auto', minInstancesPerNode=2)
 		
-        #r = LogisticRegression(featuresCol = 'features', labelCol = 'label', maxIter=10)
+        evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
+        paramGrid = (ParamGridBuilder()
+             .addGrid(random_forest.maxDepth, [5, 10])
+             .addGrid(random_forest.numTrees, [20, 50, 100])
+             .addGrid(random_forest.subsamplingRate, [0.7, 1.0])
+             .build())
+        cv = CrossValidator(estimator=random_forest, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+        
+        # Run cross validations.  This can take about 6 minutes since it is training over 20 trees!
+        cvModel = cv.fit(train)
+        print("Modello migliore ", cvModel.bestModel)
+        print("Parametri migliori ", cvModel.bestModel.extractParamMap())
+
+        predictions = cvModel.transform(test)
+        
+        evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
+        accuracy = evaluator.evaluate(predictions)
+        evaluator = BinaryClassificationEvaluator()
+        roc_auc = evaluator.evaluate(predictions)        
+        
+        print ("Accuracy Score Best Model: {0:.4f}".format(accuracy))
+        print ("ROC-AUC Best Model: {0:.4f}".format(roc_auc))
+        
+        label=[1.0,0.0]
+        predictions_pandas = predictions.toPandas()
+        lbl = predictions_pandas['label'].tolist()
+        prd = predictions_pandas['prediction'].tolist()
+        cm = confusion_matrix(lbl, prd, labels=label)
+        #print("Confusion matrix ",cm)
+        tp = cm[0][0]
+        #print("TP ", tp)
+        fp = cm[1][0]
+        #print("FP ", fp)        
+        precision = tp /(tp + fp)
+        print ("Precision Best Model: {0:.4f}".format(precision))
+        '''
+		
+        #lr = LogisticRegression(featuresCol = 'features', labelCol = 'label', maxIter=100)
         #lrModel = lr.fit(train)
-
-
-        rf = RandomForestClassifier(numTrees=100,featuresCol = 'features', labelCol = 'label')
+        #predictions = lrModel.transform(test)
+        '''
+        
+        rf = RandomForestClassifier(numTrees=100, featuresCol = 'features', labelCol = 'label', maxDepth=10, minInstancesPerNode=2)
         rfModel = rf.fit(train)
         predictions = rfModel.transform(test)
-		
-        #predictions.select("predictedLabel", "label", "features").show(5)
-        evaluator = BinaryClassificationEvaluator()
-        accuracy = predictions.filter(predictions.label == predictions.prediction).count() / float(test.count())
-        roc_auc = evaluator.evaluate(predictions)
-
-        print ("Accuracy Score: {0:.4f}".format(accuracy))
-        print ("ROC-AUC: {0:.4f}".format(roc_auc))
-
-
-
-
+        
         '''
+        #svm = LinearSVC(featuresCol = 'features', labelCol = 'label', maxIter=10, regParam=0.1)
+        #svmModel = svm.fit(train)
+        #predictions = svmModel.transform(test)
+        
+        #dt = DecisionTreeClassifier(featuresCol = 'features', labelCol = 'label')
+        #dtModel = dt.fit(train)
+        #predictions = dtModel.transform(test)
+        
+        
+        #print("                           PREDIZIONIIIIIIIIIIIIIIII ", predictions)
+        
+        #evaluator = BinaryClassificationEvaluator()
+        #metrics = BinaryClassificationMetrics(predictions)
+        #metrics = BinaryClassificationMetrics(predictionAndLabels)
+
+        #accuracy_1 = predictions.filter(predictions.label == predictions.prediction).count() / float(test.count())
+        #accuracy_2 = metrics.accuracy
+        #roc_auc = evaluator.evaluate(predictions)
+        #tp = predictions.filter(predictions.label == predictions.prediction).count()
+        #fp = predictions.filter((predictions.label == 1.0) and (predictions.prediction == 0.0)).count()
+        #precision = tp /(tp + fp)
+        #roc_auc = metrics.areaUnderROC
+        #precision = metrics.precision()
+        
+        #statistics = rfModel.summary
+        #accuracy = statistics.
+        #roc_auc = statistics.roc.toPandas()
+        #precision = statistics.pr.toPandas()
+        '''
+        
+        # Select (prediction, true label) and compute test error
+        evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
+        accuracy = evaluator.evaluate(predictions)
+        evaluator = BinaryClassificationEvaluator()
+        roc_auc = evaluator.evaluate(predictions)        
+        
+        print ("Accuracy Score a mano: {0:.4f}".format(accuracy))
+        print ("ROC-AUC a mano: {0:.4f}".format(roc_auc))
+        
+        label=[1.0,0.0]
+        predictions_pandas = predictions.toPandas()
+        lbl = predictions_pandas['label'].tolist()
+        prd = predictions_pandas['prediction'].tolist()
+        cm = confusion_matrix(lbl, prd, labels=label)
+        #print("Confusion matrix ",cm)
+        tp = cm[0][0]
+        #print("TP ", tp)
+        fp = cm[1][0]
+        #print("FP ", fp)        
+        precision = tp /(tp + fp)
+        print ("Precision a mano: {0:.4f}".format(precision))
+        
+        
+        rf = RandomForestClassifier(featuresCol = 'features', labelCol = 'label')
+        rfModel = rf.fit(train)
+        predictions = rfModel.transform(test)
+        
+        evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
+        accuracy = evaluator.evaluate(predictions)
+        evaluator = BinaryClassificationEvaluator()
+        roc_auc = evaluator.evaluate(predictions)        
+        
+        print ("Accuracy Score default: {0:.4f}".format(accuracy))
+        print ("ROC-AUC: {0:.4f}".format(roc_auc))
+        
+        label=[1.0,0.0]
+        predictions_pandas = predictions.toPandas()
+        lbl = predictions_pandas['label'].tolist()
+        prd = predictions_pandas['prediction'].tolist()
+        cm = confusion_matrix(lbl, prd, labels=label)
+        #print("Confusion matrix ",cm)
+        tp = cm[0][0]
+        #print("TP ", tp)
+        fp = cm[1][0]
+        #print("FP ", fp)        
+        precision = tp /(tp + fp)
+        print ("Precision: {0:.4f}".format(precision))
+        
+        
         importance_list = pd.Series(rf_fitted.featureImportances.values)
         sorted_imp = importance_list.sort_values(ascending= False)
         kept = list((sorted_imp[sorted_imp > 0.03]).index)
@@ -400,7 +581,3 @@ if __name__=='__main__':
         
         plt.savefig('/home/vmadmin/bigdata/confusione.pdf', dpi=300, bbox_inches="tight")
         '''
-        list_accuracy.append(accuracy)
-
-    print("Accuracy media: ",np.mean(list_accuracy))
-    
