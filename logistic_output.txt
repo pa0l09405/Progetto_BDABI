@@ -1,0 +1,56 @@
+Dataframe spark
++--------------------+----+
+|                text|type|
++--------------------+----+
+|[stand, line, tru...|real|
+|[donald, j, trump...|real|
+|[president, elect...|real|
+|[investment, pitc...|real|
+|[president, elect...|real|
+|[washington, pote...|real|
+|[san, diego, dona...|real|
+|[karen, hendricks...|real|
+|[rival, donald, j...|real|
+|[donald, j, trump...|real|
+|[scenario, sound,...|real|
+|[earlier, today, ...|real|
+|[office, new, yor...|real|
+|[cocktail, hour, ...|real|
+|[president, elect...|real|
+|[harvey, koeppel,...|real|
+|[large, rental, b...|real|
+|[donald, trump, o...|real|
+|[short, time, don...|real|
+|[washington, offi...|real|
++--------------------+----+
+only showing top 20 rows
+
+None
+[CountVectorizer] Determino il miglior classificatore posto che vocabSize=256 e minDocFreq=5
+[CountVectorizer - LogisticRegression (parametri default)] Accuracy Score: 0.8655
+[CountVectorizer - LogisticRegression (parametri default)] ROC-AUC: 0.9264
+[CountVectorizer - LogisticRegression (parametri default)] Precision: 0.8836
+[CountVectorizer - LinearSVC] Accuracy Score: 0.8652
+[CountVectorizer - LinearSVC] ROC-AUC: 0.9255
+[CountVectorizer - LinearSVC] Precision: 0.8818
+    [CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 1 [0.6820164353721245]
+    [CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 2 [0.733808540232987]
+    [CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 3 [0.7412046875636693]
+    [CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 4 [0.7894343250042273]
+    [CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 5 [0.7965034183109649]
+    [CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 6 [0.8153885566417644]
+    [CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 7 [0.8406691172040414]
+    [CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 8 [0.8626248995071851]
+    [CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 9 [0.8824782793559119]
+    [CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 10 [0.9009564561356739]
+[CountVectorizer - LogisticRegression] vocabSize =  1024
+    [CountVectorizer - LogisticRegression] Accuracy con minDocFreq  = 1 [0.9010193887977255]
+    [CountVectorizer - LogisticRegression] Accuracy con minDocFreq  = 2 [0.9010193887977255]
+    [CountVectorizer - LogisticRegression] Accuracy con minDocFreq  = 3 [0.9010193887977255]
+    [CountVectorizer - LogisticRegression] Accuracy con minDocFreq  = 4 [0.9010193887977255]
+    [CountVectorizer - LogisticRegression] Accuracy con minDocFreq  = 5 [0.9010193887977255]
+[CountVectorizer - LogisticRegression] minDocFreq =  1
+[CountVectorizer - parametri migliori del CV - LogisticRegression] Accuracy Score: 0.9401
+[CountVectorizer - parametri migliori del CV - LogisticRegression] ROC-AUC: 0.9815
+[CountVectorizer - parametri migliori del CV - LogisticRegression] Precision: 0.9530
+

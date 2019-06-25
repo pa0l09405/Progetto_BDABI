@@ -1,0 +1,19 @@
+[CountVectorizer - LinearSVC] Accuracy Score: 0.8668
+[CountVectorizer - LinearSVC] ROC-AUC: 0.9251
+[CountVectorizer - LinearSVC] Precision: 0.8862
+[CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 5 [0.7939882203271613]
+[CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 6 [0.8142518798823054]
+[CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 7 [0.840915609544706]
+[CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 8 [0.8646680616026124]
+[CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 9 [0.8841612960303867]
+[CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^ 10 [0.9058825358734761]
+[CountVectorizer - LinearSVC] vocabSize =  2048
+[CountVectorizer - LinearSVC] Accuracy con minDocFreq  = 1 [0.9151279976180214]
+[CountVectorizer - LinearSVC] Accuracy con minDocFreq  = 2 [0.9145167814949396]
+[CountVectorizer - LinearSVC] Accuracy con minDocFreq  = 3 [0.9150756426241091]
+[CountVectorizer - LinearSVC] Accuracy con minDocFreq  = 4 [0.915178685619785]
+[CountVectorizer - LinearSVC] Accuracy con minDocFreq  = 5 [0.9154130050541922]
+[CountVectorizer - LinearSVC] minDocFreq =  5
+[CountVectorizer - parametri migliori del CV - LinearSVC] Accuracy Score: 0.9630
+[CountVectorizer - parametri migliori del CV - LinearSVC] ROC-AUC: 0.9897
+[CountVectorizer - parametri migliori del CV - LinearSVC] Precision: 0.9779
