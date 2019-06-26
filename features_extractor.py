@@ -24,7 +24,6 @@ df=pd.read_csv('/home/vmadmin/fake_and_real_news_project/fake_and_real_news_data
 df=df.drop_duplicates()
 #print(df)
 
-
 #												[Parte 1] Calcolo num_sentences_in_text
 # Load English tokenizer, tagger, parser, NER and word vectors
 nlp = English()
@@ -36,7 +35,19 @@ nlp.add_pipe(sbd)
 num_sentences=[]
 text=df.text.tolist()
 title=df.title.tolist()
+language=df.language.tolist()
 size=len(title)
+
+df.language=df.language.replace(np.nan,"english")
+df.language=df.language.replace("ignore","english")
+'''
+language_list_distinct=list(set(df.language))
+print(language_list_distinct)
+list_language_to_delete=["chinese","arabic","polish","turkish","finnish","russian","norwegian","greek","italian","french","spanish","german","portuguese","dutch"]
+for elem in list_language_to_delete:
+	df=df[df.language != elem]
+'''
+df=df.loc[df['language'] == 'english']
 
 print("[Parte 1] Calcolo num_sentences_in_text")
 
@@ -194,12 +205,17 @@ df['num_word_text']=pd.Series(list_num_word);
 df['avg_word_length_text']=pd.Series(list_avg_word_lenght);
 
 
+df.to_csv('feature_extractor_beforeDROP.csv')
+
 #Rimuovo colonne del text e del title
-df.drop(['text', 'title'], axis='columns', inplace=True)
+df.drop(['author','comments','country','crawled','domain_rank','id','key','language','likes','main_img_url','ord_in_thread','participants_count','published','replies_count','shares','site_url','spam_score','thread_title','title','text'], axis='columns', inplace=True)
 #print(df)
 
+df.to_csv('feature_extractor_afterDROP.csv')
+
+
 myclient = pymongo.MongoClient("mongodb://localhost:27017/")
-mydb = myclient["prova"]
-mycol = mydb["coll"]
+mydb = myclient["dataset_fake_and_real_news"]
+mycol = mydb["features_style"]
 data = df.to_dict(orient='records')  # Here's our added param..
 mycol.insert_many(data)
