@@ -11,6 +11,7 @@ from pyspark.ml.classification import LinearSVC
 from pyspark.ml.evaluation import BinaryClassificationEvaluator
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
+from spark_stratifier import StratifiedCrossValidator
 from pyspark.ml.feature import CountVectorizer
 from pyspark.ml.feature import IDF
 from pyspark.ml.feature import StringIndexer
@@ -52,8 +53,8 @@ if __name__=='__main__':
     spark.sparkContext.setLogLevel('ERROR')
     
     client = MongoClient('mongodb://localhost:27017/')
-    db = client.fake_and_real_news_dataset
-    collection = db.text_cleaned
+    db = client.dataset_fake_and_real_news
+    collection = db.text_as_list_of_words
     #print(collection)
     df = DataFrame(collection.find())
     df = df.drop_duplicates()
@@ -68,7 +69,7 @@ if __name__=='__main__':
     type_col = df.type.tolist()
 
     for i in range(0,len(text)):
-        text[i]=text[i].lower().split(" ")
+        text[i]=text[i].split(" ")
     #print(text)
     #text="When I was young Alfredo"
     #spacy_stopwords = spacy.lang.en.stop_words.STOP_WORDS
@@ -86,11 +87,12 @@ if __name__=='__main__':
     test = df_nuova.exceptAll(train)
     #evaluator = MulticlassClassificationEvaluator(labelCol="type", predictionCol="prediction", metricName="accuracy")
     
-    print("[CountVectorizer] Determino il miglior classificatore posto che vocabSize=256 e minDocFreq=5")
-    cv = CountVectorizer(inputCol="text", outputCol='count', vocabSize = 2**8)
-    idf = IDF(inputCol='count', outputCol="features", minDocFreq=5) #minDocFreq: remove sparse terms
+    print("[TF-IDF] Determino il miglior classificatore posto che vocabSize=256 e minDocFreq=1")
+    cv = CountVectorizer(inputCol="text", outputCol='count', vocabSize = 2**8, minDF=1.0)
+    idf = IDF(inputCol='count', outputCol="features") #minDocFreq: remove sparse terms
 	
     label_stringIdx = StringIndexer(inputCol = "type", outputCol = "label")
+    
     '''
     classifier = NaiveBayes()
     pipeline = Pipeline(stages=[cv, idf, label_stringIdx, classifier])
@@ -102,8 +104,8 @@ if __name__=='__main__':
     evaluator = BinaryClassificationEvaluator()
     roc_auc = evaluator.evaluate(predictions)        
         
-    print ("[CountVectorizer - NaiveBayes] Accuracy Score: {0:.4f}".format(accuracy))
-    print ("[CountVectorizer - NaiveBayes] ROC-AUC: {0:.4f}".format(roc_auc))
+    print ("[TF-IDF - NaiveBayes (parametri default)] Accuracy Score: {0:.4f}".format(accuracy))
+    print ("[TF-IDF - NaiveBayes (parametri default)] ROC-AUC: {0:.4f}".format(roc_auc))
         
     label=[1.0,0.0]
     predictions_pandas = predictions.toPandas()
@@ -116,8 +118,7 @@ if __name__=='__main__':
     fp = cm[1][0]
     #print("FP ", fp)        
     precision = tp /(tp + fp)
-    print("[CountVectorizer - NaiveBayes] Precision: {0:.4f}".format(precision))
-    '''
+    print("[TF-IDF - NaiveBayes (parametri default)] Precision: {0:.4f}".format(precision))
     
     classifier = LogisticRegression()
     pipeline = Pipeline(stages=[cv, idf, label_stringIdx, classifier])
@@ -129,8 +130,8 @@ if __name__=='__main__':
     evaluator = BinaryClassificationEvaluator()
     roc_auc = evaluator.evaluate(predictions)        
         
-    print ("[CountVectorizer - LogisticRegression (parametri default)] Accuracy Score: {0:.4f}".format(accuracy))
-    print ("[CountVectorizer - LogisticRegression (parametri default)] ROC-AUC: {0:.4f}".format(roc_auc))
+    print ("[TF-IDF - LogisticRegression (parametri default)] Accuracy Score: {0:.4f}".format(accuracy))
+    print ("[TF-IDF - LogisticRegression (parametri default)] ROC-AUC: {0:.4f}".format(roc_auc))
         
     label=[1.0,0.0]
     predictions_pandas = predictions.toPandas()
@@ -143,8 +144,8 @@ if __name__=='__main__':
     fp = cm[1][0]
     #print("FP ", fp)        
     precision = tp /(tp + fp)
-    print("[CountVectorizer - LogisticRegression (parametri default)] Precision: {0:.4f}".format(precision))
-    '''
+    print("[TF-IDF - LogisticRegression (parametri default)] Precision: {0:.4f}".format(precision))
+    
     classifier = RandomForestClassifier()
     pipeline = Pipeline(stages=[cv, idf, label_stringIdx, classifier])
     pipelineFit = pipeline.fit(train)
@@ -155,8 +156,8 @@ if __name__=='__main__':
     evaluator = BinaryClassificationEvaluator()
     roc_auc = evaluator.evaluate(predictions)        
         
-    print ("[CountVectorizer - RandomForest] Accuracy Score: {0:.4f}".format(accuracy))
-    print ("[CountVectorizer - RandomForest] ROC-AUC: {0:.4f}".format(roc_auc))
+    print ("[TF-IDF - RandomForest (parametri default)] Accuracy Score: {0:.4f}".format(accuracy))
+    print ("[TF-IDF - RandomForest (parametri default)] ROC-AUC: {0:.4f}".format(roc_auc))
         
     label=[1.0,0.0]
     predictions_pandas = predictions.toPandas()
@@ -169,7 +170,7 @@ if __name__=='__main__':
     fp = cm[1][0]
     #print("FP ", fp)        
     precision = tp /(tp + fp)
-    print("[CountVectorizer - RandomForest] Precision: {0:.4f}".format(precision))
+    print("[TF-IDF - RandomForest (parametri default)] Precision: {0:.4f}".format(precision))
     
     classifier = DecisionTreeClassifier()
     pipeline = Pipeline(stages=[cv, idf, label_stringIdx, classifier])
@@ -181,8 +182,8 @@ if __name__=='__main__':
     evaluator = BinaryClassificationEvaluator()
     roc_auc = evaluator.evaluate(predictions)        
         
-    print ("[CountVectorizer - DecisionTree] Accuracy Score: {0:.4f}".format(accuracy))
-    print ("[CountVectorizer - DecisionTree] ROC-AUC: {0:.4f}".format(roc_auc))
+    print ("[TF-IDF - DecisionTree (parametri default)] Accuracy Score: {0:.4f}".format(accuracy))
+    print ("[TF-IDF - DecisionTree (parametri default)] ROC-AUC: {0:.4f}".format(roc_auc))
         
     label=[1.0,0.0]
     predictions_pandas = predictions.toPandas()
@@ -195,9 +196,9 @@ if __name__=='__main__':
     fp = cm[1][0]
     #print("FP ", fp)        
     precision = tp /(tp + fp)
-    print("[CountVectorizer - DecisionTree] Precision: {0:.4f}".format(precision))
+    print("[TF-IDF - DecisionTree (parametri default)] Precision: {0:.4f}".format(precision))
     
-    '''
+    
     classifier = LinearSVC()
     pipeline = Pipeline(stages=[cv, idf, label_stringIdx, classifier])
     pipelineFit = pipeline.fit(train)
@@ -208,8 +209,8 @@ if __name__=='__main__':
     evaluator = BinaryClassificationEvaluator()
     roc_auc = evaluator.evaluate(predictions)        
         
-    print ("[CountVectorizer - LinearSVC] Accuracy Score: {0:.4f}".format(accuracy))
-    print ("[CountVectorizer - LinearSVC] ROC-AUC: {0:.4f}".format(roc_auc))
+    print ("[TF-IDF - LinearSVC (parametri default)] Accuracy Score: {0:.4f}".format(accuracy))
+    print ("[TF-IDF - LinearSVC (parametri default)] ROC-AUC: {0:.4f}".format(roc_auc))
         
     label=[1.0,0.0]
     predictions_pandas = predictions.toPandas()
@@ -222,13 +223,55 @@ if __name__=='__main__':
     fp = cm[1][0]
     #print("FP ", fp)        
     precision = tp /(tp + fp)
-    print("[CountVectorizer - LinearSVC] Precision: {0:.4f}".format(precision))
-     
-
-
+    print("[TF-IDF - LinearSVC (parametri default)] Precision: {0:.4f}".format(precision))
     '''
+     
+     
+    evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
+    cv = CountVectorizer(inputCol="text", outputCol='count', vocabSize = 2**8, minDF=1.0)
+    idf = IDF(inputCol='count', outputCol="features")
+    paramGrid = ParamGridBuilder().build()
+    label_stringIdx = StringIndexer(inputCol = "type", outputCol = "label")
+    pipeline = Pipeline(stages=[cv, idf, label_stringIdx])
+    pipelineFit = pipeline.fit(train)
+    pipelineTransform = pipelineFit.transform(train)
+
+    classifier = NaiveBayes(featuresCol = 'features', labelCol = 'label')
+    xv = CrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cvModel = xv.fit(pipelineTransform)
+    accuracy = cvModel.avgMetrics
+    print("[TF-IDF - NaiveBayes (parametri default)] Accuracy:", accuracy)
+    classifier = DecisionTreeClassifier(featuresCol = 'features', labelCol = 'label')
+    xv = CrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cvModel = xv.fit(pipelineTransform)
+    accuracy = cvModel.avgMetrics
+    print("[TF-IDF - DecisionTree (parametri default)] Accuracy:",accuracy)
+    classifier = RandomForestClassifier(featuresCol = 'features', labelCol = 'label')
+    xv = CrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cvModel = xv.fit(pipelineTransform)
+    accuracy = cvModel.avgMetrics
+    print("[TF-IDF - RandomForest (parametri default)] Accuracy:",accuracy)
+    classifier = LogisticRegression(featuresCol = 'features', labelCol = 'label')
+    xv = CrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cvModel = xv.fit(pipelineTransform)
+    accuracy = cvModel.avgMetrics
+    print("[TF-IDF - LogisticRegression (parametri default)] Accuracy:",accuracy)
+    classifier = LinearSVC(featuresCol = 'features', labelCol = 'label')
+    xv = CrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cvModel = xv.fit(pipelineTransform)
+    accuracy = cvModel.avgMetrics
+    print("[TF-IDF - LinearSVC (parametri default)] Accuracy:",accuracy)
+     
+     
+     
+     
+     
+     
+     
+     
+     
 	 
-    
+    '''
     #Logistic Regressor
     
     
@@ -237,7 +280,7 @@ if __name__=='__main__':
     lr = LogisticRegression(featuresCol = 'features', labelCol = 'label')
     paramGrid = ParamGridBuilder().build()
      
-    for i in range (1,11):
+    for i in range (1,16):
         #print("CF")
         count = CountVectorizer(inputCol="text", outputCol='count', vocabSize=2**i)
         count_fit = count.fit(train)
@@ -260,25 +303,26 @@ if __name__=='__main__':
         
         cv = CrossValidator(estimator=lr, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
         cvModel = cv.fit(label_transform)
-        print("    [CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^",i, cvModel.avgMetrics)
+        print("    [TF-IDF - LogisticRegression] Accuracy con vocabSize  = 2^",i, cvModel.avgMetrics)
         list_acc_2.append(cvModel.avgMetrics)
             
-    vocabsize = list_acc_2.index(max(list_acc_2))+1
-    print("[CountVectorizer - LogisticRegression] vocabSize = ", 2**vocabsize)
+    #vocabsize = 2**(list_acc_2.index(max(list_acc_2))+1)
+    vocabsize = 2**(list_acc_2.index(max(list_acc_2))+11)
+    print("[TF-IDF - LogisticRegression] vocabSize = ", vocabsize)
     
     list_acc_2 = []
     evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
     lr = LogisticRegression(featuresCol = 'features', labelCol = 'label')
     paramGrid = ParamGridBuilder().build()
-        
-    for i in range (1,6):
+
+    for i in range (0,3):
         #print("CF")
-        count = CountVectorizer(inputCol="text", outputCol='count', vocabSize=2**vocabsize)
+        count = CountVectorizer(inputCol="text", outputCol='count', vocabSize=vocabsize, minDF=0.05*i)
         count_fit = count.fit(train)
         count_transform = count_fit.transform(train)
         #print(count_transform.show(2, truncate = False))
         #print("IDF")
-        idf = IDF(inputCol='count', outputCol="features", minDocFreq=i)
+        idf = IDF(inputCol='count', outputCol="features")
         idf_fit = idf.fit(count_transform)
         idf_transform = idf_fit.transform(count_transform)
         #print(idf_transform.show(2, truncate = False))
@@ -290,21 +334,21 @@ if __name__=='__main__':
         
         cv = CrossValidator(estimator=lr, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
         cvModel = cv.fit(label_transform)
-        print("    [CountVectorizer - LogisticRegression] Accuracy con minDocFreq  =",i, cvModel.avgMetrics)
+        print("    [TF-IDF - LogisticRegression] Accuracy con minDocFreq  = 0.",i, cvModel.avgMetrics)
         list_acc_2.append(cvModel.avgMetrics)
             
-    mindocfreq = list_acc_2.index(max(list_acc_2))+1
-    print("[CountVectorizer - LogisticRegression] minDocFreq = ", mindocfreq)
+    mindocfreq = 0.05*(list_acc_2.index(max(list_acc_2)))
+    print("[TF-IDF - LogisticRegression] minDocFreq = ", mindocfreq)
 
     
     #print("CF")
-    count = CountVectorizer(inputCol="text", outputCol='count', vocabSize=2**vocabsize)
+    count = CountVectorizer(inputCol="text", outputCol='count', vocabSize=vocabsize, minDF=mindocfreq)
     count_fit = count.fit(train)
     count_transform = count_fit.transform(train)
-    count_transform_test = count_fit.transform(train)
+    count_transform_test = count_fit.transform(test)
     #print(count_transform.show(2, truncate = False))
     #print("IDF")
-    idf = IDF(inputCol='count', outputCol="features", minDocFreq=mindocfreq)
+    idf = IDF(inputCol='count', outputCol="features")
     idf_fit = idf.fit(count_transform)
     idf_transform = idf_fit.transform(count_transform)
     idf_transform_test = idf_fit.transform(count_transform_test)
@@ -324,8 +368,8 @@ if __name__=='__main__':
     evaluator = BinaryClassificationEvaluator()
     roc_auc = evaluator.evaluate(predictions)        
         
-    print ("[CountVectorizer - parametri migliori del CV - LogisticRegression] Accuracy Score: {0:.4f}".format(accuracy))
-    print ("[CountVectorizer - parametri migliori del CV - LogisticRegression] ROC-AUC: {0:.4f}".format(roc_auc))
+    print ("[TF-IDF - parametri migliori del CV - LogisticRegression] Accuracy Score: {0:.4f}".format(accuracy))
+    print ("[TF-IDF - parametri migliori del CV - LogisticRegression] ROC-AUC: {0:.4f}".format(roc_auc))
         
     label=[1.0,0.0]
     predictions_pandas = predictions.toPandas()
@@ -338,7 +382,7 @@ if __name__=='__main__':
     fp = cm[1][0]
     #print("FP ", fp)        
     precision = tp /(tp + fp)
-    print("[CountVectorizer - parametri migliori del CV - LogisticRegression] Precision: {0:.4f}".format(precision))
+    print("[TF-IDF - parametri migliori del CV - LogisticRegression] Precision: {0:.4f}".format(precision))
 
 
     plt.clf()
@@ -351,18 +395,27 @@ if __name__=='__main__':
     ax.xaxis.set_ticklabels(['real','fake']); ax.yaxis.set_ticklabels(['real','fake'])
     
         
-    plt.savefig('/home/vmadmin/bigdata/confusion_count_vectorizer_logistic.pdf', dpi=300, bbox_inches="tight")
+    plt.savefig('/home/vmadmin/bigdata/confusion_tf_idf_logistic.pdf', dpi=300, bbox_inches="tight")
+    '''
     
     
     
-    
+
+
+
+
+
+
+
+
+
+
+
 
     
     
     print("\n")
     
-    
-    '''    
     
     #Linear SVC
     
@@ -371,7 +424,7 @@ if __name__=='__main__':
     svc = LinearSVC(featuresCol = 'features', labelCol = 'label')
     paramGrid = ParamGridBuilder().build()
       
-    for i in range (5,11):
+    for i in range (8,16):
         #print("CF")
         count = CountVectorizer(inputCol="text", outputCol='count', vocabSize=2**i)
         count_fit = count.fit(train)
@@ -394,25 +447,25 @@ if __name__=='__main__':
         
         cv = CrossValidator(estimator=svc, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
         cvModel = cv.fit(label_transform)
-        print("    [CountVectorizer - LogisticRegression] Accuracy con vocabSize  = 2^",i, cvModel.avgMetrics)
+        print("    [TF-IDF - LinearSVC] Accuracy con vocabSize  = 2^",i, cvModel.avgMetrics)
         list_acc_2.append(cvModel.avgMetrics)
             
-    vocabsize = list_acc_2.index(max(list_acc_2))+6
-    print("[CountVectorizer - LinearSVC] vocabSize = ", 2**vocabsize)
+    vocabsize = 2**(list_acc_2.index(max(list_acc_2))+8)
+    print("[TF-IDF - LinearSVC] vocabSize = ", vocabsize)
     
     list_acc_2 = []
     evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
     svc = LinearSVC(featuresCol = 'features', labelCol = 'label')
     paramGrid = ParamGridBuilder().build()
         
-    for i in range (1,6):
+    for i in range (0,3):
         #print("CF")
-        count = CountVectorizer(inputCol="text", outputCol='count', vocabSize=2**vocabsize)
+        count = CountVectorizer(inputCol="text", outputCol='count', vocabSize=vocabsize, minDF=0.05*i)
         count_fit = count.fit(train)
         count_transform = count_fit.transform(train)
         #print(count_transform.show(2, truncate = False))
         #print("IDF")
-        idf = IDF(inputCol='count', outputCol="features", minDocFreq=i)
+        idf = IDF(inputCol='count', outputCol="features")
         idf_fit = idf.fit(count_transform)
         idf_transform = idf_fit.transform(count_transform)
         #print(idf_transform.show(2, truncate = False))
@@ -424,20 +477,20 @@ if __name__=='__main__':
         
         cv = CrossValidator(estimator=svc, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
         cvModel = cv.fit(label_transform)
-        print("    [CountVectorizer - LinearSVC] Accuracy con minDocFreq  =",i, cvModel.avgMetrics)
+        print("    [TF-IDF - LinearSVC] Accuracy con minDocFreq  = 0.05 *",i, cvModel.avgMetrics)
         list_acc_2.append(cvModel.avgMetrics)
             
-    mindocfreq = list_acc_2.index(max(list_acc_2))+1
-    print("[CountVectorizer - LinearSVC] minDocFreq = ", mindocfreq)
+    mindocfreq =  0.05*(list_acc_2.index(max(list_acc_2)))
+    print("[TF-IDF - LinearSVC] minDocFreq = ", mindocfreq)
     
     #print("CF")
-    count = CountVectorizer(inputCol="text", outputCol='count', vocabSize=2**vocabsize)
+    count = CountVectorizer(inputCol="text", outputCol='count', vocabSize=vocabsize, minDF=mindocfreq)
     count_fit = count.fit(train)
     count_transform = count_fit.transform(train)
-    count_transform_test = count_fit.transform(train)
+    count_transform_test = count_fit.transform(test)
     #print(count_transform.show(2, truncate = False))
     #print("IDF")
-    idf = IDF(inputCol='count', outputCol="features", minDocFreq=mindocfreq)
+    idf = IDF(inputCol='count', outputCol="features")
     idf_fit = idf.fit(count_transform)
     idf_transform = idf_fit.transform(count_transform)
     idf_transform_test = idf_fit.transform(count_transform_test)
@@ -457,8 +510,8 @@ if __name__=='__main__':
     evaluator = BinaryClassificationEvaluator()
     roc_auc = evaluator.evaluate(predictions)        
         
-    print ("[CountVectorizer - parametri migliori del CV - LinearSVC] Accuracy Score: {0:.4f}".format(accuracy))
-    print ("[CountVectorizer - parametri migliori del CV - LinearSVC] ROC-AUC: {0:.4f}".format(roc_auc))
+    print ("[TF-IDF - parametri migliori del CV - LinearSVC] Accuracy Score: {0:.4f}".format(accuracy))
+    print ("[TF-IDF - parametri migliori del CV - LinearSVC] ROC-AUC: {0:.4f}".format(roc_auc))
         
     label=[1.0,0.0]
     predictions_pandas = predictions.toPandas()
@@ -471,7 +524,7 @@ if __name__=='__main__':
     fp = cm[1][0]
     #print("FP ", fp)        
     precision = tp /(tp + fp)
-    print("[CountVectorizer - parametri migliori del CV - LinearSVC] Precision: {0:.4f}".format(precision))
+    print("[TF-IDF - parametri migliori del CV - LinearSVC] Precision: {0:.4f}".format(precision))
 
 
     plt.clf()
@@ -484,4 +537,4 @@ if __name__=='__main__':
     ax.xaxis.set_ticklabels(['real','fake']); ax.yaxis.set_ticklabels(['real','fake'])
     
         
-    plt.savefig('/home/vmadmin/bigdata/confusion_count_vectorizer_svc.pdf', dpi=300, bbox_inches="tight")
+    plt.savefig('/home/vmadmin/bigdata/confusion_tf_idf_svc.pdf', dpi=300, bbox_inches="tight")
