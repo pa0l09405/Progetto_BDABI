@@ -1,0 +1,52 @@
+Dataframe spark
++--------------------+----+
+|                text|type|
++--------------------+----+
+|[, stand, line, t...|real|
+|[, donald, j, tru...|real|
+|[, president, ele...|real|
+|[, investment, pi...|real|
+|[, president, ele...|real|
+|[, washington, po...|real|
+|[, san, diego, do...|real|
+|[, karen, hendric...|real|
+|[, rival, donald,...|real|
+|[, donald, j, tru...|real|
+|[, scenario, soun...|real|
+|[, early, today, ...|real|
+|[, office, new, y...|real|
+|[, cocktail, hour...|real|
+|[, president, ele...|real|
+|[, harvey, koeppe...|real|
+|[, large, rental,...|real|
+|[, donald, trump,...|real|
+|[, short, time, d...|real|
+|[, washington, of...|real|
++--------------------+----+
+only showing top 20 rows
+
+None
+[TF-IDF] Determino il miglior classificatore posto che vocabSize=256 e minDocFreq=1
+[TF-IDF - NaiveBayes (parametri default)] Accuracy: [0.82458292130378]
+[TF-IDF - DecisionTree (parametri default)] Accuracy: [0.8112272455745014]
+[TF-IDF - RandomForest (parametri default)] Accuracy: [0.8251122431502449]
+[TF-IDF - LogisticRegression (parametri default)] Accuracy: [0.8737938411561393]
+[TF-IDF - LinearSVC (parametri default)] Accuracy: [0.8738770248464954]
+
+
+    [TF-IDF - LinearSVC] Accuracy con vocabSize  = 2^ 8 [0.8738770248464954]
+    [TF-IDF - LinearSVC] Accuracy con vocabSize  = 2^ 9 [0.8885201861091756]
+    [TF-IDF - LinearSVC] Accuracy con vocabSize  = 2^ 10 [0.9088469009564478]
+    [TF-IDF - LinearSVC] Accuracy con vocabSize  = 2^ 11 [0.9177013198696192]
+    [TF-IDF - LinearSVC] Accuracy con vocabSize  = 2^ 12 [0.9195654788867581]
+    [TF-IDF - LinearSVC] Accuracy con vocabSize  = 2^ 13 [0.926755831943152]
+    [TF-IDF - LinearSVC] Accuracy con vocabSize  = 2^ 14 [0.9291045107212446]
+    [TF-IDF - LinearSVC] Accuracy con vocabSize  = 2^ 15 [0.9294081896239361]
+[TF-IDF - LinearSVC] vocabSize =  32768
+    [TF-IDF - LinearSVC] Accuracy con minDocFreq  = 0.05 * 0 [0.9284741958305098]
+    [TF-IDF - LinearSVC] Accuracy con minDocFreq  = 0.05 * 1 [0.9104149785946386]
+    [TF-IDF - LinearSVC] Accuracy con minDocFreq  = 0.05 * 2 [0.8819205722934871]
+[TF-IDF - LinearSVC] minDocFreq =  0.0
+[TF-IDF - parametri migliori del CV - LinearSVC] Accuracy Score: 0.9244
+[TF-IDF - parametri migliori del CV - LinearSVC] ROC-AUC: 0.9691
+[TF-IDF - parametri migliori del CV - LinearSVC] Precision: 0.9280
