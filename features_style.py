@@ -28,6 +28,7 @@ from sklearn import metrics
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
+from spark_stratified import StratifiedCrossValidator
 #from sklearn.naive_bayes import MultinomialNB
 #from sklearn.utils.multiclass import unique_labels
 import csv
@@ -53,51 +54,17 @@ if __name__=='__main__':
     spark.sparkContext.setLogLevel('ERROR')
     
     client = MongoClient('mongodb://localhost:27017/')
-    db = client.prova
-    collection = db.coll
-    print(collection)
+    db = client.dataset_fake_and_real_news
+    collection = db.features_style
+    #print(collection)
     df = pd.DataFrame(collection.find())
-    print(type(df))
-    df = df.drop_duplicates()
-    df.drop(['_id', 'id'], axis='columns', inplace=True)
+    #print(type(df))
+    print("Dataframe pandas")
     print(df)
-    
-    author=df.author.tolist()
-    avg_word_length_text=df.avg_word_length_text.tolist()
-    comments=df.comments.tolist()
-    country=df.country.tolist()
-    domain_rank=df.domain_rank.tolist()
-    key=df.key.tolist()
-    language=df.language.tolist()
-    likes=df.likes.tolist()
-    main_img_url=df.main_img_url.tolist()
-    num_adj_in_text=df.num_adj_in_text.tolist()
-    num_adj_in_title=df.num_adj_in_title.tolist()
-    num_adv_in_text=df.num_adv_in_text.tolist()
-    num_adv_in_title=df.num_adv_in_title.tolist()
-    num_capital_words_in_text=df.num_capital_words_in_text.tolist()
-    num_capital_words_in_title=df.num_capital_words_in_title.tolist()
-    num_exclamation_mark_in_text=df.num_exclamation_mark_in_text.tolist()
-    num_exclamation_mark_in_title=df.num_exclamation_mark_in_title.tolist()
-    num_noun_in_text=df.num_noun_in_text.tolist()
-    num_noun_in_title=df.num_noun_in_title.tolist()
-    num_propn_in_text=df.num_propn_in_text.tolist()
-    num_propn_in_title=df.num_propn_in_title.tolist()
-    num_punct_in_text=df.num_punct_in_text.tolist()
-    num_punct_in_title=df.num_punct_in_title.tolist()
-    num_question_mark_in_text=df.num_question_mark_in_text.tolist()
-    num_question_mark_in_title=df.num_question_mark_in_title.tolist()
-    num_sentences_in_text=df.num_sentences_in_text.tolist()
-    num_word_text=df.num_word_text.tolist()
-    ord_in_thread=df.ord_in_thread.tolist()
-    participants_count=df.participants_count.tolist()
-    replies_count=df.replies_count.tolist()
-    shares=df.shares.tolist()
-    spam_score=df.spam_score.tolist()
-    thread_title=df.thread_title.tolist()
-    type=df.type.tolist()
-    
-    df_spark = spark.createDataFrame(zip(avg_word_length_text,num_adj_in_text,num_adj_in_title,num_adv_in_text,num_adv_in_title,num_capital_words_in_text,num_capital_words_in_title,num_exclamation_mark_in_text,num_exclamation_mark_in_title,num_noun_in_text,num_noun_in_title,num_propn_in_text,num_propn_in_title,num_punct_in_text,num_punct_in_title,num_question_mark_in_text,num_question_mark_in_title,num_sentences_in_text,num_word_text,type), schema=['avg_word_length_text','num_adj_in_text','num_adj_in_title','num_adv_in_text','num_adv_in_title','num_capital_words_in_text','num_capital_words_in_title','num_exclamation_mark_in_text','num_exclamation_mark_in_title','num_noun_in_text','num_noun_in_title','num_propn_in_text','num_propn_in_title','num_punct_in_text','num_punct_in_title','num_question_mark_in_text','num_question_mark_in_title','num_sentences_in_text','num_word_text','type'])
+    df = df.drop("_id", axis=1)
+    df_spark = spark.createDataFrame(df)
+    #print("Dataframe spark")
+    #print(df_spark.show(truncate = False))
 	
     #pipeline stages
     stages = []
@@ -130,39 +97,37 @@ if __name__=='__main__':
     
     #Random Forest
     classifier = RandomForestClassifier(featuresCol = 'features', labelCol = 'label')
-    cv = CrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cv = StratifiedCrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
     cvModel = cv.fit(train) 
     print("[Random Forest] Default accuracy: ",cvModel.avgMetrics)
     
     #Decision Tree
     classifier = DecisionTreeClassifier(featuresCol = 'features', labelCol = 'label')
-    cv = CrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cv = StratifiedCrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
     cvModel = cv.fit(train) 
     print("[Decision Tree] Default accuracy: ",cvModel.avgMetrics)
     
-    '''
     #Linear SVC
     classifier = LinearSVC(featuresCol = 'features', labelCol = 'label')
-    cv = CrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cv = StratifiedCrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
     cvModel = cv.fit(train) 
-    print("Linear SVC (default accuracy) ",cvModel.avgMetrics)
+    print("[Linear SVC] Default accuracy: ",cvModel.avgMetrics)
     
     #Logistic Regression
     classifier = LogisticRegression(featuresCol = 'features', labelCol = 'label')
-    cv = CrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cv = StratifiedCrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
     cvModel = cv.fit(train) 
-    print("Logistic Regression (default accuracy) ",cvModel.avgMetrics)
+    print("[Logistic Regression] Default accuracy: ",cvModel.avgMetrics)
     
     #Naive Bayes
     classifier = NaiveBayes(featuresCol = 'features', labelCol = 'label')
-    cv = CrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cv = StratifiedCrossValidator(estimator=classifier, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
     cvModel = cv.fit(train) 
-    print("Naive Bayes (default accuracy) ",cvModel.avgMetrics)
-    '''
+    print("[Naive Bayes] Default accuracy: ",cvModel.avgMetrics)
     
     print("\n")
-    '''
-    print("[Decision Tree] Feature Selection - Gini index")
+    
+    print("[Decision Tree con Gini Index] Feature Selection - Gini index")
     random_fs = RandomForestClassifier(numTrees=100, maxDepth=5, featuresCol = 'features', labelCol = 'label')
     model = random_fs.fit(train)
     #print(model.featureImportances)
@@ -176,13 +141,13 @@ if __name__=='__main__':
         new_train = new_train.drop('rawPrediction', 'probability', 'prediction')
         dt2 = DecisionTreeClassifier(featuresCol = 'features2', labelCol = 'label')
         paramGrid = ParamGridBuilder().build()
-        cv = CrossValidator(estimator=dt2, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+        cv = StratifiedCrossValidator(estimator=dt2, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
         cvModel = cv.fit(new_train) 
-        print("    [Decision Tree] Accuracy con num_features = ",i, cvModel.avgMetrics)
+        print("    [Decision Tree con Gini Index] Accuracy con num_features = ",i, cvModel.avgMetrics)
         list_acc.append(cvModel.avgMetrics)
             
     best_idx = list_acc.index(max(list_acc))+1
-    print("[Decision Tree] Il numero di features ottimo è ", best_idx)
+    print("[Decision Tree con Gini Index] Il numero di features ottimo è ", best_idx)
     
     print(ExtractFeatureImp(model.featureImportances, train, "features").head(best_idx))
 
@@ -198,12 +163,12 @@ if __name__=='__main__':
              .addGrid(dt2.impurity, ['gini', 'entropy'])
              .addGrid(dt2.minInstancesPerNode, [1, 2, 3])
              .build())
-    cv = CrossValidator(estimator=dt2, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cv = StratifiedCrossValidator(estimator=dt2, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
     cvModel = cv.fit(new_train) 
-    print("[Decision Tree] Selezione degli iperparametri ")
-    print("[Decision Tree] Modello migliore ", cvModel.bestModel)
+    print("[Decision Tree con Gini Index] Selezione degli iperparametri ")
+    print("[Decision Tree con Gini Index] Modello migliore ", cvModel.bestModel)
     best_params = cvModel.getEstimatorParamMaps()[ np.argmax(cvModel.avgMetrics) ]
-    print("[Decision Tree] Parametri migliori", best_params)
+    print("[Decision Tree con Gini Index] Parametri migliori", best_params)
     
     
     varidx = [x for x in varlist['idx'][0:best_idx]]
@@ -216,32 +181,33 @@ if __name__=='__main__':
     evaluator = BinaryClassificationEvaluator()
     roc_auc = evaluator.evaluate(predictions)        
         
-    print ("[Decision Tree con Gini Index] Accuracy Score: {0:.4f}".format(accuracy))
-    print ("[Decision Tree con Gini Index] ROC-AUC: {0:.4f}".format(roc_auc))
+    print ("[Decision Tree con Gini Index - parametri migliori] Accuracy Score: {0:.4f}".format(accuracy))
+    print ("[Decision Tree con Gini Index - parametri migliori] ROC-AUC: {0:.4f}".format(roc_auc))
         
     label=[1.0,0.0]
     predictions_pandas = predictions.toPandas()
     lbl = predictions_pandas['label'].tolist()
     prd = predictions_pandas['prediction'].tolist()
-    cm = confusion_matrix(lbl, prd, labels=label)
+    cm_dt_gini = confusion_matrix(lbl, prd, labels=label)
     #print("Confusion matrix ",cm)
-    tp = cm[0][0]
+    tp = cm_dt_gini[0][0]
     #print("TP ", tp)
-    fp = cm[1][0]
+    fp = cm_dt_gini[1][0]
     #print("FP ", fp)        
     precision = tp /(tp + fp)
-    print("[Decision Tree con Gini Index] Precision: {0:.4f}".format(precision))
-    
+    print("[Decision Tree con Gini Index - parametri migliori] Precision: {0:.4f}".format(precision))
+    print("[Decision Tree con Gini Index - parametri migliori] Matrice di confusione: ", cm_dt_gini)
+        
     ax= plt.subplot()
-    sns.heatmap(cm, annot=True, ax = ax, cmap='Blues', fmt="d"); #annot=True to annotate cells
+    sns.heatmap(cm_dt_gini, annot=True, ax = ax, cmap='Blues', fmt="d"); #annot=True to annotate cells
 
     # labels, title and ticks
     ax.set_xlabel('Predicted labels');ax.set_ylabel('True labels'); 
     ax.set_title('Confusion Matrix'); 
     ax.xaxis.set_ticklabels(['real','fake']); ax.yaxis.set_ticklabels(['real','fake'])
         
-    plt.savefig('/home/vmadmin/fake_and_real_news_project/confusione_decision_tree_gini.pdf', dpi=300, bbox_inches="tight")
-    '''
+    plt.savefig('/home/vmadmin/fake_and_real_news_project/confusion_decision_tree_gini.pdf', dpi=300, bbox_inches="tight")
+
     print("[Decision Tree] Feature Selection - ChiSquared Selector")  
     
     #... 
@@ -260,55 +226,70 @@ if __name__=='__main__':
         selector = ChiSqSelector(numTopFeatures=i, featuresCol="features", outputCol="selectedFeatures", labelCol="label")
         paramGrid = ParamGridBuilder().build()
         dt3 = DecisionTreeClassifier(featuresCol = 'selectedFeatures', labelCol = 'label')
-        cv = CrossValidator(estimator=dt3, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+        cv = StratifiedCrossValidator(estimator=dt3, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
         result = selector.fit(train)
         result2=result.transform(train)
         cvModel = cv.fit(result2)
-        print("    [Decision Tree] Accuracy con numTopFeatures  = ",i, cvModel.avgMetrics)
+        print("    [Decision Tree con ChiSq] Accuracy con numTopFeatures  = ",i, cvModel.avgMetrics)
         list_acc_2.append(cvModel.avgMetrics)
             
     best_numTopFeatures = list_acc_2.index(max(list_acc_2))+1
-    print("[Decision Tree] Il numero di features ottimo è ", best_numTopFeatures)
+    print("[Decision Tree con ChiSq] Il numero di features ottimo è ", best_numTopFeatures)
     selector = ChiSqSelector(numTopFeatures=best_numTopFeatures, featuresCol="features", outputCol="selectedFeatures", labelCol="label")
     new_train = selector.fit(train)
     new_train2 = new_train.transform(train)
-    new_test = new_train.transform(test)
-    print("[Decision Tree] Le top features sono: ", df_spark.toPandas().columns[new_train.selectedFeatures])
+    print("[Decision Tree con ChiSq] Le top features sono: ", df_spark.toPandas().columns[new_train.selectedFeatures])
+    
     dt3 = DecisionTreeClassifier(featuresCol = 'selectedFeatures', labelCol = 'label')
-    model_best_numTopFeatures = dt3.fit(new_train2)
-    predictions = model_best_numTopFeatures.transform(new_test)
+    #print(dt2.explainParams())
+    paramGrid = (ParamGridBuilder()
+             .addGrid(dt3.maxDepth, [2, 5, 10, 15])
+             .addGrid(dt3.impurity, ['gini', 'entropy'])
+             .addGrid(dt3.minInstancesPerNode, [1, 2, 3])
+             .build())
+    cv = StratifiedCrossValidator(estimator=dt3, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cvModel = cv.fit(new_train2) 
+    print("[Decision Tree con ChiSq] Selezione degli iperparametri ")
+    print("[Decision Tree con ChiSq] Modello migliore ", cvModel.bestModel)
+    best_params = cvModel.getEstimatorParamMaps()[ np.argmax(cvModel.avgMetrics) ]
+    print("[Decision Tree con ChiSq] Parametri migliori", best_params)
+    
+    new_test = new_train.transform(test)
+    predictions = cvModel.bestModel.transform(new_test)
     
     evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
     accuracy = evaluator.evaluate(predictions)
     evaluator = BinaryClassificationEvaluator()
     roc_auc = evaluator.evaluate(predictions)        
         
-    print ("[Decision Tree con ChiSq] Accuracy Score: {0:.4f}".format(accuracy))
-    print ("[Decision Tree con ChiSq] ROC-AUC: {0:.4f}".format(roc_auc))
+    print ("[Decision Tree con ChiSq - parametri migliori] Accuracy Score: {0:.4f}".format(accuracy))
+    print ("[Decision Tree con ChiSq - parametri migliori] ROC-AUC: {0:.4f}".format(roc_auc))
+
         
     label=[1.0,0.0]
     predictions_pandas = predictions.toPandas()
     lbl = predictions_pandas['label'].tolist()
     prd = predictions_pandas['prediction'].tolist()
-    cm = confusion_matrix(lbl, prd, labels=label)
+    cm_chi = confusion_matrix(lbl, prd, labels=label)
     #print("Confusion matrix ",cm)
-    tp = cm[0][0]
+    tp = cm_chi[0][0]
     #print("TP ", tp)
-    fp = cm[1][0]
+    fp = cm_chi[1][0]
     #print("FP ", fp)        
     precision = tp /(tp + fp)
-    print("[Decision Tree con ChiSq] Precision: {0:.4f}".format(precision))
-    
+    print("[Decision Tree con ChiSq - parametri migliori] Precision: {0:.4f}".format(precision))
+    print("[Decision Tree con ChiSq - parametri migliori] Matrice di confusione: ", cm_chi)
+
     plt.clf()
     ax1= plt.subplot()
-    sns.heatmap(cm, annot=True, ax = ax1, cmap='Blues', fmt="d"); #annot=True to annotate cells
+    sns.heatmap(cm_chi, annot=True, ax = ax1, cmap='Blues', fmt="d"); #annot=True to annotate cells
 
     # labels, title and ticks
     ax1.set_xlabel('Predicted labels');ax1.set_ylabel('True labels'); 
     ax1.set_title('Confusion Matrix'); 
     ax1.xaxis.set_ticklabels(['real','fake']); ax1.yaxis.set_ticklabels(['real','fake'])
         
-    plt.savefig('/home/vmadmin/fake_and_real_news_project/confusione_decision_tree_chisq.pdf', dpi=300, bbox_inches="tight")
+    plt.savefig('/home/vmadmin/fake_and_real_news_project/confusion_decision_tree_chisq.pdf', dpi=300, bbox_inches="tight")
     
     
     print("\n\n\n\n")
@@ -325,11 +306,11 @@ if __name__=='__main__':
         .addGrid(random_forest.numTrees, [20, 50, 100])
         .addGrid(random_forest.subsamplingRate, [0.7, 1.0])
         .build())
-    cv = CrossValidator(estimator=random_forest, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
+    cv = StratifiedCrossValidator(estimator=random_forest, estimatorParamMaps=paramGrid, evaluator=evaluator, numFolds=10)
         
     # Run cross validations.  This can take about 6 minutes since it is training over 20 trees!
     cvModel = cv.fit(train)
-    print("[Decision Tree] Selezione degli iperparametri ")
+    print("[Random Forest] Selezione degli iperparametri ")
     print("[Random Forest] Modello migliore ", cvModel.bestModel)
     best_params = cvModel.getEstimatorParamMaps()[ np.argmax(cvModel.avgMetrics) ]
     print("[Random Forest] Parametri migliori", best_params)
@@ -341,25 +322,26 @@ if __name__=='__main__':
     evaluator = BinaryClassificationEvaluator()
     roc_auc = evaluator.evaluate(predictions)        
         
-    print ("[Random Forest] Accuracy Score: {0:.4f}".format(accuracy))
-    print ("[Random Forest] ROC-AUC: {0:.4f}".format(roc_auc))
+    print ("[Random Forest - parametri migliori] Accuracy Score: {0:.4f}".format(accuracy))
+    print ("[Random Forest - parametri migliori] ROC-AUC: {0:.4f}".format(roc_auc))
         
     label=[1.0,0.0]
     predictions_pandas = predictions.toPandas()
     lbl = predictions_pandas['label'].tolist()
     prd = predictions_pandas['prediction'].tolist()
-    cm = confusion_matrix(lbl, prd, labels=label)
+    cm_rand = confusion_matrix(lbl, prd, labels=label)
     #print("Confusion matrix ",cm)
-    tp = cm[0][0]
+    tp = cm_rand[0][0]
     #print("TP ", tp)
-    fp = cm[1][0]
+    fp = cm_rand[1][0]
     #print("FP ", fp)        
     precision = tp /(tp + fp)
-    print ("[Random Forest] Precision: {0:.4f}".format(precision))
+    print ("[Random Forest - parametri migliori] Precision: {0:.4f}".format(precision))
+    print ("[Random Forest - parametri migliori] Matrice di confusione: ", cm_rand)
     
     plt.clf()
     ax2= plt.subplot()
-    sns.heatmap(cm, annot=True, ax = ax2, cmap='Blues', fmt="d"); #annot=True to annotate cells
+    sns.heatmap(cm_rand, annot=True, ax = ax2, cmap='Blues', fmt="d"); #annot=True to annotate cells
 
     # labels, title and ticks
     ax2.set_xlabel('Predicted labels');ax2.set_ylabel('True labels'); 

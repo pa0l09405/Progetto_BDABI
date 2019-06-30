@@ -11,7 +11,7 @@ from pyspark.ml.classification import LinearSVC
 from pyspark.ml.evaluation import BinaryClassificationEvaluator
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
-from spark_stratifier import StratifiedCrossValidator
+#from spark_stratifier import StratifiedCrossValidator
 from pyspark.ml.feature import CountVectorizer
 from pyspark.ml.feature import IDF
 from pyspark.ml.feature import StringIndexer
